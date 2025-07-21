@@ -259,8 +259,8 @@
     <script>
         // --- IMPORTANT CHANGE HERE ---
         // Base URL for your Django backend API
-        // This has been updated to your Render backend URL.
-        const API_BASE_URL = 'https://nexel-portfolio-backend.onrender.com/api/';
+        // Since frontend will be served from the same domain, it's a relative path now.
+        const API_BASE_URL = '/api/';
         // --- END IMPORTANT CHANGE ---
 
         // --- Utility Functions ---
@@ -273,23 +273,6 @@
             setTimeout(() => {
                 modal.classList.remove('show');
             }, 3000); // Hide after 3 seconds
-        }
-
-        // Helper function to get CSRF token from cookies (for Django POST requests)
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    // Does this cookie string begin with the name we want?
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
         }
 
         // --- Mobile Menu Toggle ---
@@ -397,7 +380,7 @@
                     }
                 }
                 const developers = await response.json();
-                
+
                 developersContainer.innerHTML = ''; // Clear loading message
 
                 if (developers.length === 0) {
@@ -420,7 +403,7 @@
 
                     // Use actual image URL from backend if available, otherwise use placeholder
                     // Assuming your Django Developer model might have an 'image_url' field
-                    const imageUrl = dev.image_url || developerImagePlaceholders[index % developerImagePlaceholders.length]; 
+                    const imageUrl = dev.image_url || developerImagePlaceholders[index % developerImagePlaceholders.length];
 
                     devCard.innerHTML = `
                         <img src="${imageUrl}" alt="${dev.name}" class="rounded-full mx-auto mb-6 w-40 h-40 object-cover border-4 ${borderColorClass.replace('100', '200')} shadow-lg onerror="this.onerror=null;this.src='https://placehold.co/200x200/CCCCCC/000000?text=No+Image';">
@@ -434,7 +417,7 @@
                 console.error('Error fetching developers:', error);
                 let userMessage = `Failed to load developers. Please ensure your Django backend server is running at ${API_BASE_URL}developers/`;
                 if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-                    userMessage += ` Also, check your browser's console for CORS errors. You might need to configure 'django-cors-headers' (e.g., install it and set 'CORS_ALLOW_ALL_ORIGINS = True' in settings.py for development).`;
+                    userMessage += ` Also, check your browser's console for network issues.`;
                 } else {
                     userMessage += ` Error details: ${error.message}.`;
                 }
@@ -456,13 +439,13 @@
             const data = Object.fromEntries(formData.entries());
 
             try {
-                const csrftoken = getCookie('csrftoken'); // Get CSRF token from cookies
-
+                // No need for getCookie('csrftoken') or X-CSRFToken header for same-origin requests
+                // Django's CsrfViewMiddleware will handle it automatically for forms rendered by Django.
                 const response = await fetch(`${API_BASE_URL}contact/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken // Include CSRF token in headers
+                        // 'X-CSRFToken': csrftoken // REMOVED: Not needed for same-origin forms
                     },
                     body: JSON.stringify(data)
                 });
@@ -477,8 +460,8 @@
             } catch (error) {
                 console.error('Error submitting contact form:', error);
                 let userMessage = `An error occurred while sending your message.`;
-                 if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-                    userMessage += ` Please ensure your Django backend server is running and CORS is configured.`;
+                if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                    userMessage += ` Please ensure your Django backend server is running.`;
                 } else {
                     userMessage += ` Error details: ${error.message}.`;
                 }
